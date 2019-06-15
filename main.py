@@ -4,7 +4,7 @@ from math import atan2, sin, cos, log, sqrt, pi
 import matplotlib.pyplot as plt
 from vpython import vec, mag, sphere, rate, color, arrow, quad, vertex, canvas
 
-scene = canvas(width=1024, height=768, background=color.gray(0.5))
+scene = canvas(title="right mouse=rotate, wheel=zoom, left mouse=resize scene", width=1024, height=768, background=color.gray(0.5))
 
 # Orbitrap
 
