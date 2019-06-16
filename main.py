@@ -1,5 +1,5 @@
 from math import atan2, sin, cos, log, sqrt, pi
-from numpy import zeros, complex
+from numpy import zeros, max
 from numpy.fft import fft
 import scipy.constants
 import matplotlib.pyplot as plt
@@ -19,8 +19,7 @@ k = 2 * U_r / (R_m ** 2 * log(R_2 / R_1) - (R_2 ** 2 - R_1 ** 2) / 2)
 # particle
 
 u = scipy.constants.physical_constants["atomic mass constant"][0]
-e = scipy.constants.e
-q = e
+q = 1 * scipy.constants.e
 m = 12 * u
 R = (3 * R_1 + R_2) / 4
 v_phi = sqrt((k / 2) * (q / m) * (R_m ** 2 - R ** 2))
@@ -90,45 +89,41 @@ def E(p):
 
 # initializations
 
-
 orbitrap_plot(R_1, -U_r, 1)
 orbitrap_plot(R_2, 0.0, -1)
 w = sqrt((q / m) * k)
 f = w / (2 * pi)
 dt = 1 / f / 100
 
-print(f / 1e6, "MHz axial frequency")
-print(v_phi, "m/s tangential velocity")
-
-# LF
+# Leap-Frog time integration
 
 N_t = 2 ** 13
-ii = zeros(N_t, dtype=complex)
+ii = zeros(N_t)
 particle = sphere(pos=r, radius=0.5e-3, color=color.green, make_trail=True, retain=100)
 v -= dt * (q / m) * E(particle.pos) / 2
 for i in range(N_t):
     v += dt * (q / m) * E(particle.pos)
     particle.pos += dt * v
-    ii[i] = complex(v.z / v_phi, 0.0)
+    ii[i] = v.z / v_phi
     rate(75)
 
 # spectral analysis
 
 II = fft(ii)
-m = zeros(int(N_t / 2))
-II_mag = zeros(int(N_t / 2))
-for i in range(1, int(N_t / 2)):
-    w = 2 * pi * i / float(N_t * dt)
-    m[i] = k * e / w ** 2
+m = zeros(N_t // 2)
+II_mag = zeros(N_t // 2)
+for i in range(1, N_t // 2):
+    w = 2 * pi * i / (N_t * dt)
+    m[i] = k * q / w ** 2
     II_mag[i] = abs(II[i])
 
 # plot
 
 plt.figure("Test Ion: Carbon")
 plt.xlabel("m / u")
-plt.ylabel("1 / Hz")
+plt.ylabel("normalized density")
 plt.xlim(0, 50)
-plt.ylim(0, 3500)
+plt.ylim(0, 1.1)
 plt.xticks(list(plt.xticks()[0]) + [12])
-plt.plot(m / u, II_mag)
+plt.plot(m / u, II_mag / max(II_mag))
 plt.show()
