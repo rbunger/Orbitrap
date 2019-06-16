@@ -1,10 +1,12 @@
+from math import atan2, sin, cos, log, sqrt, pi
 from numpy import zeros, complex
 from numpy.fft import fft
-from math import atan2, sin, cos, log, sqrt, pi
+import scipy.constants
 import matplotlib.pyplot as plt
 from vpython import vec, mag, sphere, rate, color, arrow, quad, vertex, canvas
 
-scene = canvas(title="right mouse=rotate, wheel=zoom, left mouse=resize scene", width=1024, height=768, background=color.gray(0.5))
+scene = canvas(title="right mouse=rotate, wheel=zoom, left=resize scene; Fourier analysis follows after simulation has terminated",
+               width=1024, height=768, background=color.gray(0.5))
 
 # Orbitrap
 
@@ -16,8 +18,8 @@ k = 2 * U_r / (R_m ** 2 * log(R_2 / R_1) - (R_2 ** 2 - R_1 ** 2) / 2)
 
 # particle
 
-e = 1.602e-19
-u = 1.66053892e-27
+u = scipy.constants.physical_constants["atomic mass constant"][0]
+e = scipy.constants.e
 q = e
 m = 12 * u
 R = (3 * R_1 + R_2) / 4
@@ -25,11 +27,9 @@ v_phi = sqrt((k / 2) * (q / m) * (R_m ** 2 - R ** 2))
 v = vec(-v_phi, 0, 0)
 r = vec(0, R, 12e-3)
 
-# Orbitrap plot
 
-
-def vrtx(x, y, z):
-    return vertex(pos=vec(x, y, z), color=color.blue, normal=vec(x**2, y**2, 0) / sqrt(x**2 + y**2))
+def vrtx(x, y, z, n_sign):
+    return vertex(pos=vec(x, y, z), color=color.blue, normal=n_sign * vec(x**2, y**2, 0) / sqrt(x**2 + y**2))
 
 
 def U(r, z):
@@ -43,22 +43,22 @@ def dU(r, z):
 def r_Newton(r, z, U_12):
     while True:
         r_new = r - (U(r, z) - U_12) / dU(r, z)
-        if (abs(r_new - r) > 1e-10):
+        if (abs(r_new - r) > 1e-12):
             r = r_new
         else:
             return r_new
 
 
-def orbitrap_plot(r_start, U_12):
+def orbitrap_plot(r_start, U_12, n_sign):
     N_z = 25
     N_phi = 50
     z_max = 2 * R_2
     r = r_start
     dz = z_max / (N_z - 1)
     dphi = 2 * pi / (N_phi - 1)
-    rr = zeros(N_z, dtype=float)
-    zz = zeros(N_z, dtype=float)
-    if (int(U_12) == 0):
+    rr = zeros(N_z)
+    zz = zeros(N_z)
+    if (n_sign == -1):
         N_phi = int(N_phi / 2)
         E_0 = 10 * mag(E(vec(0, R_2, 0))) / (R_2 - R_1)
     for i in range(0, N_z):
@@ -66,22 +66,20 @@ def orbitrap_plot(r_start, U_12):
         r = r_Newton(r, z, U_12)
         rr[i] = r
         zz[i] = z
-        if (abs(U_12) == 0):
+        if (n_sign == -1):
             p = vec(0, r, z)
             arrow(pos=p, axis=E(p) / E_0, color=color.red)
         if (i > 0):
             for j in range(0, N_phi):
                 phi = pi / 2 + j * dphi
-                quad(vs=[vrtx(rr[i - 1] * cos(phi), rr[i - 1] * sin(phi),  zz[i - 1]),
-                         vrtx(rr[i] * cos(phi), rr[i] * sin(phi),  zz[i]),
-                         vrtx(rr[i] * cos(phi + dphi), rr[i] * sin(phi + dphi),  zz[i]),
-                         vrtx(rr[i - 1] * cos(phi + dphi), rr[i - 1] * sin(phi + dphi),  zz[i - 1])])
-                quad(vs=[vrtx(rr[i] * cos(phi), rr[i] * sin(phi), -zz[i]),
-                         vrtx(rr[i - 1] * cos(phi), rr[i - 1] * sin(phi), -zz[i - 1]),
-                         vrtx(rr[i - 1] * cos(phi + dphi), rr[i - 1] * sin(phi + dphi), -zz[i - 1]),
-                         vrtx(rr[i] * cos(phi + dphi), rr[i] * sin(phi + dphi), -zz[i])])
-
-# E-field
+                quad(vs=[vrtx(rr[i - 1] * cos(phi), rr[i - 1] * sin(phi),  zz[i - 1], n_sign),
+                         vrtx(rr[i] * cos(phi), rr[i] * sin(phi),  zz[i], n_sign),
+                         vrtx(rr[i] * cos(phi + dphi), rr[i] * sin(phi + dphi),  zz[i], n_sign),
+                         vrtx(rr[i - 1] * cos(phi + dphi), rr[i - 1] * sin(phi + dphi),  zz[i - 1], n_sign)])
+                quad(vs=[vrtx(rr[i] * cos(phi), rr[i] * sin(phi), -zz[i], n_sign),
+                         vrtx(rr[i - 1] * cos(phi), rr[i - 1] * sin(phi), -zz[i - 1], n_sign),
+                         vrtx(rr[i - 1] * cos(phi + dphi), rr[i - 1] * sin(phi + dphi), -zz[i - 1], n_sign),
+                         vrtx(rr[i] * cos(phi + dphi), rr[i] * sin(phi + dphi), -zz[i], n_sign)])
 
 
 def E(p):
@@ -93,8 +91,8 @@ def E(p):
 # initializations
 
 
-orbitrap_plot(R_1, -U_r)
-orbitrap_plot(R_2, 0.0)
+orbitrap_plot(R_1, -U_r, 1)
+orbitrap_plot(R_2, 0.0, -1)
 w = sqrt((q / m) * k)
 f = w / (2 * pi)
 dt = 1 / f / 100
@@ -112,13 +110,13 @@ for i in range(N_t):
     v += dt * (q / m) * E(particle.pos)
     particle.pos += dt * v
     ii[i] = complex(v.z / v_phi, 0.0)
-    rate(100)
+    rate(75)
 
 # perform FFT
 # w = sqrt((q/m)k)
 # w^2 = (q/m)k
 # m/q = k / w^2
-# m/z = ke / w^2
+# m/Z = ke / w^2
 
 II = fft(ii)
 mz = zeros(int(N_t / 2))
@@ -129,9 +127,10 @@ for i in range(1, int(N_t / 2)):
     II_mag[i] = abs(II[i])
 
 plt.figure("Test Ion: Carbon")
-plt.xlabel("m/z / u")
+plt.xlabel("m/Z / u")
 plt.ylabel("1 / Hz")
 plt.xlim(0, 50)
 plt.ylim(0, 3500)
+plt.xticks(list(plt.xticks()[0]) + [12])
 plt.plot(mz / u, II_mag)
 plt.show()
