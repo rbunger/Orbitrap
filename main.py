@@ -90,6 +90,7 @@ def E(p):
 
 # initializations
 
+
 orbitrap_plot(R_1, -U_r, 1)
 orbitrap_plot(R_2, 0.0, -1)
 w = sqrt((q / m) * k)
@@ -112,24 +113,22 @@ for i in range(N_t):
     rate(75)
 
 # spectral analysis
-# w = sqrt((q/m)k)
-# w^2 = (q/m)k
-# m/q = k / w^2
-# m/Z = ke / w^2
 
 II = fft(ii)
-m_by_Z = zeros(int(N_t / 2))
+m = zeros(int(N_t / 2))
 II_mag = zeros(int(N_t / 2))
 for i in range(1, int(N_t / 2)):
     w = 2 * pi * i / float(N_t * dt)
-    m_by_Z[i] = k * e / w ** 2
+    m[i] = k * e / w ** 2
     II_mag[i] = abs(II[i])
 
+# plot
+
 plt.figure("Test Ion: Carbon")
-plt.xlabel("m/Z / u")
+plt.xlabel("m / u")
 plt.ylabel("1 / Hz")
 plt.xlim(0, 50)
 plt.ylim(0, 3500)
 plt.xticks(list(plt.xticks()[0]) + [12])
-plt.plot(m_by_Z / u, II_mag)
+plt.plot(m / u, II_mag)
 plt.show()
