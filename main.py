@@ -130,7 +130,6 @@ m = zeros(N_t)
 for i in range(1, N_t // 2):
     w = 2 * pi * i / (N_t * dt)
     m[i] = k * q / w ** 2
-I_spec_mag = abs(I_spec)
 
 # plot
 
@@ -140,5 +139,5 @@ plt.ylabel("normalized density")
 plt.xlim(0, 50)
 plt.ylim(0, 1.1)
 plt.xticks(list(plt.xticks()[0]) + [12])
-plt.plot(m / u, I_spec_mag / max(I_spec_mag))
+plt.plot(m / u, abs(I_spec) / max(abs(I_spec)))
 plt.show()
